@@ -6,7 +6,6 @@ from rlbench.environment import Environment
 from rlbench.observation_config import ObservationConfig
 
 
-
 class EnvironmentTest(unittest.TestCase):
   def test_env_init(self):
     env = Environment(
