@@ -7,17 +7,16 @@ from rlbench.observation_config import ObservationConfig
 
 
 class EnvironmentTest(unittest.TestCase):
-  def test_env_init(self):
-    env = Environment(
-      action_mode=MoveArmThenGripper(
-        arm_action_mode=JointVelocity(),
-        gripper_action_mode=Discrete()
-      ),
-      obs_config=ObservationConfig(),
-      headless=True
-    )
-    self.assertIsNotNone(env)
+    def test_env_init(self):
+        env = Environment(
+            action_mode=MoveArmThenGripper(
+                arm_action_mode=JointVelocity(), gripper_action_mode=Discrete()
+            ),
+            obs_config=ObservationConfig(),
+            headless=True,
+        )
+        self.assertIsNotNone(env)
 
 
 if __name__ == "__main__":
-  unittest.main()
+    unittest.main()
