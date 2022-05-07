@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import numpy as np
 import torch
 from torch import nn
@@ -6,8 +7,40 @@ from torch.distributions import Normal
 from rlbench.backend.observation import Observation
 
 
+class ReturnEstimator(ABC):
+    @staticmethod
+    @abstractmethod
+    def get_return(*args, **kwargs) -> np.float:
+        raise NotImplementedError
+
+
+class DiscountReturn(ReturnEstimator):
+    def get_return(rewards: np.ndarray, gamma: np.float=0.99) -> np.float:
+        pot = np.cumsum(np.ones(len(rewards))) - 1
+        g = np.full(len(pot), fill_value=gamma)
+        discount_gamma = g ** pot
+        return np.sum(rewards * discount_gamma)
+
+
 class TrajectoryReplayBuffer:
-    pass
+    """A buffer class for storing trajectory data"""
+    def __init__(self, return_estimator: ReturnEstimator, buf_size: int=20) -> None:
+        self._buf_size = buf_size
+        self._r = return_estimator
+        self._v = np.zeros(buf_size, dtype=np.float)
+        self._q = np.zeros(buf_size, dtype=np.float)
+
+    def store(self, idx: int, reward: np.float) -> None:
+        assert idx <= self._buf_size
+        self._v[idx] = reward
+        self._q[idx] = reward
+
+    def compute_advantage(self):
+        return self._r.get_return(self._v)
+
+    def get_trajectories(self):
+        data = dict(Q=self.Q, V=self.V)
+        return {k: torch.as_tensor(v, dtype=torch.float32) for k,v in data.items()}
 
 
 class DiagonalGaussian(nn.Module):
