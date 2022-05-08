@@ -1,4 +1,7 @@
+from typing import Optional
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
 import numpy as np
 import torch
 from torch import nn
@@ -8,16 +11,18 @@ from rlbench.backend.observation import Observation
 
 
 class ReturnEstimator(ABC):
-    @staticmethod
     @abstractmethod
-    def get_return(*args, **kwargs) -> np.float:
+    def get_return(self, rewards: np.ndarray) -> np.float:
         raise NotImplementedError
 
 
+@dataclass
 class DiscountReturn(ReturnEstimator):
-    def get_return(rewards: np.ndarray, gamma: np.float=0.99) -> np.float:
+    gamma: Optional[float] = 0.99
+
+    def get_return(self, rewards: np.ndarray) -> np.float:
         pot = np.cumsum(np.ones(len(rewards))) - 1
-        g = np.full(len(pot), fill_value=gamma)
+        g = np.full(len(pot), fill_value=self.gamma)
         discount_gamma = g ** pot
         return np.sum(rewards * discount_gamma)
 
