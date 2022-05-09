@@ -11,7 +11,8 @@ from custom_tasks.move_arm_only_action_mode import MoveArmOnly
 def main() -> None:
     env = Environment(
         action_mode=MoveArmOnly(
-            arm_action_mode=JointVelocity(), gripper_action_mode=Discrete()
+            arm_action_mode=JointVelocity(),
+            gripper_action_mode=Discrete()
         ),
         obs_config=ObservationConfig(),
         headless=True,
