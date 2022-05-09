@@ -3,8 +3,6 @@ import torch
 from torch import nn
 from torch.distributions import Normal
 
-from rlbench.backend.observation import Observation
-
 
 class DiagonalGaussian(nn.Module):
     def __init__(
@@ -15,9 +13,9 @@ class DiagonalGaussian(nn.Module):
         self.covariance_matrix = torch.nn.Parameter(torch.as_tensor(log_std))
         self.mean_action_net = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
-            activation(),
+            activation,
             nn.Linear(hidden_dim, action_dim),
-            activation(),
+            activation,
         )
 
     def _distribution(self, observation):
@@ -43,9 +41,9 @@ class ValueFunctionLearner(nn.Module):
         super(ValueFunctionLearner, self).__init__()
         self.v_net = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
-            activation(),
+            activation,
             nn.Linear(hidden_dim, action_dim),
-            activation(),
+            activation
         )
 
     def forward(self, observation):
@@ -55,7 +53,7 @@ class ValueFunctionLearner(nn.Module):
 
 class Agent(nn.Module):
     def __init__(
-        self, obs_dim: int, action_dim: int, hidden_dim: int = 32, activation=nn.Softmax
+        self, obs_dim: int, action_dim: int, hidden_dim: int = 32, activation=nn.Softmax(dim=-1)
     ) -> None:
         super(Agent, self).__init__()
         self.policy = DiagonalGaussian(obs_dim, hidden_dim, action_dim, activation)
@@ -63,13 +61,14 @@ class Agent(nn.Module):
             obs_dim, hidden_dim, action_dim, activation
         )
 
-    def step(self, obs: Observation):
+    def step(self, obs: torch.Tensor):
         with torch.no_grad():
             policy_dist = self.policy._distribution(obs)
             action = policy_dist.sample()
+            action[0] = 1
             mean_action = self.policy._log_probs_from_dist(policy_dist, action)
             value = self.value_func(obs)
         return action.numpy(), value.numpy(), mean_action.numpy()
 
-    def act(self, obs: Observation):
+    def act(self, obs: torch.Tensor):
         return self.step(obs)[0]
