@@ -4,8 +4,8 @@ from rlbench.environment import Environment
 from rlbench.observation_config import ObservationConfig
 from rlbench.tasks import ReachTarget
 
-from agent import Agent
-from move_arm_only_action_mode import MoveArmOnly
+from src.agent import Agent
+from custom_tasks.move_arm_only_action_mode import MoveArmOnly
 
 
 def main() -> None:

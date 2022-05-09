@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from agent import DiscountReturn
+from src.utils import DiscountReturn
 
 
 class AgentTest(unittest.TestCase):
