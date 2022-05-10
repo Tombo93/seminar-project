@@ -1,5 +1,4 @@
-from rlbench.tasks import ReachTarget
-from rlbench.environment import Environment
+from rlbench.environment import Environment, TaskEnvironment
 
 import torch
 from torch import nn
@@ -7,12 +6,12 @@ from torch.optim import Adam
 
 from src.agent import Agent
 from src.utils import TrajectoryReplayBuffer, DiscountReturn
-from custom_tasks.custom_env import get_env
+from custom_tasks.custom_env import get_env_task_env
 
 
 def main(
     env: Environment,
-    task: ReachTarget,
+    task: TaskEnvironment,
     trajectory_buf: TrajectoryReplayBuffer,
     episodes: int = 2,
     episode_length: int = 40,
@@ -58,8 +57,7 @@ def main(
 
 
 if __name__ == "__main__":
-    env = get_env()
-    task = env.get_task(ReachTarget)
+    env, task = get_env_task_env()
     episode_len = 40
     buf = TrajectoryReplayBuffer(DiscountReturn(), buf_size=episode_len)
     main(env, task, buf, episode_length=episode_len)
