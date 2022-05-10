@@ -30,13 +30,21 @@ class DiscountReturn(ReturnEstimator):
 class TrajectoryReplayBuffer:
     """A buffer class for storing trajectory data"""
 
-    def __init__(self, return_estimator: ReturnEstimator, buf_size: int = 20) -> None:
+    def __init__(
+        self,
+        return_estimator: ReturnEstimator,
+        obs_dim: np.shape,
+        act_dim: np.shape,
+        buf_size: int = 20,
+    ) -> None:
         self._buf_size = buf_size
-        self._r = return_estimator
-        self._act = np.zeros(buf_size, dtype=np.float)
+        self._return_estimator = return_estimator
+        self._obs = np.zeros((buf_size, obs_dim), dtype=np.float)
+        self._act = np.zeros((buf_size, act_dim), dtype=np.float)
+        self._val = np.zeros((buf_size, act_dim), dtype=np.float)
+        self._adv = np.zeros(buf_size, dtype=np.float)
         self._mean_act = np.zeros(buf_size, dtype=np.float)
-        self._v = np.zeros(buf_size, dtype=np.float)
-        self._q = np.zeros(buf_size, dtype=np.float)
+        self._rewards = np.zeros(buf_size, dtype=np.float)
 
     def store(
         self,
@@ -48,15 +56,15 @@ class TrajectoryReplayBuffer:
     ) -> None:
         assert idx < self._buf_size
         self._act[idx] = action
-        self._v[idx] = value
-        self._q[idx] = reward
+        self._val[idx] = value
+        self._rewards[idx] = reward
         self._mean_act[idx] = mean_act
 
     def compute_advantage(self):
-        return self._r.get_return(self._v)
+        return self._return_estimator.get_return(self._val)
 
     def get_trajectories(self):
-        data = dict(Q=self.Q, V=self.V)
+        data = dict(V=self._val)
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
 

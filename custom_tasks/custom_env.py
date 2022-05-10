@@ -15,5 +15,6 @@ def get_env_task_env(headless: bool = True):
         obs_config=ObservationConfig(),
         headless=headless,
     )
+    env.launch()
     task = env.get_task(ReachTarget)
     return env, task

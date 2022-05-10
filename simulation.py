@@ -18,7 +18,6 @@ def main(
     learning_rate: float = 0.0001,
 ) -> None:
 
-    env.launch()
     _, obs = task.reset()
 
     agent = Agent(
@@ -29,20 +28,21 @@ def main(
     pi_optim = Adam(agent.policy.parameters(), lr=learning_rate)
     val_optim = Adam(agent.value_func.parameters(), lr=learning_rate)
 
+    trajectories = []
     for _ in range(episodes):
         print("Reset Episode")
         _, obs = task.reset()
         for t in range(episode_length):
 
             action, value, mean_action = agent.step(
-                torch.as_tensor(obs, dtype=torch.float32)
+                torch.as_tensor(obs.get_low_dim_data(), dtype=torch.float32)
             )
 
             print(action)
             obs, reward, done = task.step(action)
 
             trajectory_buf.store(t, action, value, reward, mean_action)
-
+            
             pi_optim.zero_grad()
             val_optim.zero_grad()
             # policy_loss = compute_pi_loss()
@@ -51,13 +51,16 @@ def main(
             # val_loss.backward()
             pi_optim.step()
             val_optim.step()
+        trajectories.append(trajectory_buf.get_trajectories())
 
     print("Done")
     env.shutdown()
 
 
 if __name__ == "__main__":
+    episode_len, obs_dim, act_dim = 40, 29, 8
+    buf = TrajectoryReplayBuffer(
+        DiscountReturn(), obs_dim, act_dim, buf_size=episode_len
+    )
     env, task = get_env_task_env()
-    episode_len = 40
-    buf = TrajectoryReplayBuffer(DiscountReturn(), buf_size=episode_len)
     main(env, task, buf, episode_length=episode_len)
