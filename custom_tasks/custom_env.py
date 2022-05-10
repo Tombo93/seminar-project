@@ -1,0 +1,16 @@
+from rlbench.action_modes.arm_action_modes import JointVelocity
+from rlbench.action_modes.gripper_action_modes import Discrete
+from rlbench.environment import Environment
+from rlbench.observation_config import ObservationConfig
+
+from custom_tasks.move_arm_only_action_mode import MoveArmOnly
+
+
+def get_env(headless: bool = True):
+    return Environment(
+        action_mode=MoveArmOnly(
+            arm_action_mode=JointVelocity(), gripper_action_mode=Discrete()
+        ),
+        obs_config=ObservationConfig(),
+        headless=headless,
+    )

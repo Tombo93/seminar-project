@@ -1,31 +1,25 @@
-from tkinter.tix import Tree
-from rlbench.action_modes.arm_action_modes import JointVelocity
-from rlbench.action_modes.gripper_action_modes import Discrete
-from rlbench.environment import Environment
-from rlbench.observation_config import ObservationConfig
 from rlbench.tasks import ReachTarget
+from rlbench.environment import Environment
 
 import torch
-from torch.optim import Adam
 from torch import nn
+from torch.optim import Adam
 
 from src.agent import Agent
-from custom_tasks.move_arm_only_action_mode import MoveArmOnly
+from src.utils import TrajectoryReplayBuffer, DiscountReturn
+from custom_tasks.custom_env import get_env
 
 
 def main(
-    episodes: int = 80, episode_length: int = 40, learning_rate: float = 0.0001
+    env: Environment,
+    task: ReachTarget,
+    trajectory_buf: TrajectoryReplayBuffer,
+    episodes: int = 2,
+    episode_length: int = 40,
+    learning_rate: float = 0.0001,
 ) -> None:
 
-    env = Environment(
-        action_mode=MoveArmOnly(
-            arm_action_mode=JointVelocity(), gripper_action_mode=Discrete()
-        ),
-        obs_config=ObservationConfig(),
-        headless=True,
-    )
     env.launch()
-    task = env.get_task(ReachTarget)
     _, obs = task.reset()
 
     agent = Agent(
@@ -36,30 +30,36 @@ def main(
     pi_optim = Adam(agent.policy.parameters(), lr=learning_rate)
     val_optim = Adam(agent.value_func.parameters(), lr=learning_rate)
 
-    obs = torch.tensor(obs.get_low_dim_data(), dtype=torch.float32)
-    for i in range(episodes):
-        if i % episode_length == 0:
-            print("Reset Episode")
-            descriptions, obs = task.reset()
-            obs = torch.tensor(obs.get_low_dim_data(), dtype=torch.float32)
-            print(descriptions)
-        action, value, mean_action = agent.step(obs)
-        print(action)
-        obs, reward, done = task.step(action)
-        obs = torch.tensor(obs.get_low_dim_data(), dtype=torch.float32)
+    for _ in range(episodes):
+        print("Reset Episode")
+        _, obs = task.reset()
+        for t in range(episode_length):
 
-        pi_optim.zero_grad()
-        val_optim.zero_grad()
-        # policy_loss = compute_pi_loss()
-        # policy_loss.backward()
-        # val_loss = compute_val_loss()
-        # val_loss.backward()
-        pi_optim.step()
-        val_optim.step()
+            action, value, mean_action = agent.step(
+                torch.as_tensor(obs, dtype=torch.float32)
+            )
+
+            print(action)
+            obs, reward, done = task.step(action)
+
+            trajectory_buf.store(t, action, value, reward, mean_action)
+
+            pi_optim.zero_grad()
+            val_optim.zero_grad()
+            # policy_loss = compute_pi_loss()
+            # policy_loss.backward()
+            # val_loss = compute_val_loss()
+            # val_loss.backward()
+            pi_optim.step()
+            val_optim.step()
 
     print("Done")
     env.shutdown()
 
 
 if __name__ == "__main__":
-    main()
+    env = get_env()
+    task = env.get_task(ReachTarget)
+    episode_len = 40
+    buf = TrajectoryReplayBuffer(DiscountReturn(), buf_size=episode_len)
+    main(env, task, buf, episode_length=episode_len)

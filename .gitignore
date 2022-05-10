@@ -2,7 +2,7 @@ assets/
 
 .vscode
 
-dependencies
+dependencies/
 # Jupyter Notebook
 .ipynb_checkpoints
 

@@ -33,13 +33,24 @@ class TrajectoryReplayBuffer:
     def __init__(self, return_estimator: ReturnEstimator, buf_size: int = 20) -> None:
         self._buf_size = buf_size
         self._r = return_estimator
+        self._act = np.zeros(buf_size, dtype=np.float)
+        self._mean_act = np.zeros(buf_size, dtype=np.float)
         self._v = np.zeros(buf_size, dtype=np.float)
         self._q = np.zeros(buf_size, dtype=np.float)
 
-    def store(self, idx: int, reward: np.float) -> None:
-        assert idx <= self._buf_size
-        self._v[idx] = reward
+    def store(
+        self,
+        idx: int,
+        action: np.float,
+        value: np.float,
+        reward: np.float,
+        mean_act: np.float,
+    ) -> None:
+        assert idx < self._buf_size
+        self._act[idx] = action
+        self._v[idx] = value
         self._q[idx] = reward
+        self._mean_act[idx] = mean_act
 
     def compute_advantage(self):
         return self._r.get_return(self._v)
