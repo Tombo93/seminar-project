@@ -43,7 +43,7 @@ class ValueFunctionLearner(nn.Module):
             nn.Linear(obs_dim, hidden_dim),
             activation,
             nn.Linear(hidden_dim, action_dim),
-            activation
+            activation,
         )
 
     def forward(self, observation):
@@ -51,9 +51,13 @@ class ValueFunctionLearner(nn.Module):
         return self.v_net(observation)
 
 
-class Agent(nn.Module):
+class Agent:
     def __init__(
-        self, obs_dim: int, action_dim: int, hidden_dim: int = 32, activation=nn.Softmax(dim=-1)
+        self,
+        obs_dim: int,
+        action_dim: int,
+        hidden_dim: int = 32,
+        activation=nn.Softmax(dim=-1),
     ) -> None:
         super(Agent, self).__init__()
         self.policy = DiagonalGaussian(obs_dim, hidden_dim, action_dim, activation)

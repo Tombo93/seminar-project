@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -8,6 +8,47 @@ import torch
 import matplotlib.pyplot as plt
 
 from rlbench.backend.observation import Observation
+
+
+class Advantage(ABC):
+    @abstractmethod
+    def estimate(self, values: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
+@dataclass
+class GAE(Advantage):
+    """
+    Generalized advantage estimate of a trajectory
+    gamma: trajectory discount (scalar)
+    lamda: exponential mean discount (scalar)
+    value_old_state: value function result with old_state input
+    value_new_state: value function result with new_state input
+    reward: agent reward of taking actions in the environment
+    done: flag for end of episode
+    """
+    rewards: np.ndarray
+    val_old: np.ndarray
+    val_new: np.ndarray
+    done: np.ndarray
+    batch_size: int = done.shape[0]
+    adv: np.ndarray = np.zeros(batch_size + 1)
+    value_target: np.ndarray = np.zeros(batch_size)
+    lamda: Optional[float] = 0.5
+    gamma: Optional[float] = 0.99
+
+    def estimate(self) -> Tuple[np.ndarray, np.ndarray]:
+        for t in reversed(range(self.batch_size)):
+            delta = (
+                self.rewards[t]
+                + (self.gamma * self.val_new[t] * self.done[t])
+                - self.val_old[t]
+            )
+            self.adv[t] = delta + (
+                self.gamma * self.lamda * self.adv[t + 1] * self.done[t]
+            )
+            self.value_target = self.adv + np.squeeze(self.val_old)
+        return self.adv[: self.batch_size], self.target
 
 
 class ReturnEstimator(ABC):
@@ -33,15 +74,16 @@ class TrajectoryReplayBuffer:
     def __init__(
         self,
         return_estimator: ReturnEstimator,
-        obs_dim: np.shape,
-        act_dim: np.shape,
+        obs_dim: int,
+        act_dim: int,
+        val_dim: int,
         buf_size: int = 20,
     ) -> None:
         self._buf_size = buf_size
         self._return_estimator = return_estimator
         self._obs = np.zeros((buf_size, obs_dim), dtype=np.float)
         self._act = np.zeros((buf_size, act_dim), dtype=np.float)
-        self._val = np.zeros((buf_size, act_dim), dtype=np.float)
+        self._val = np.zeros((buf_size, val_dim), dtype=np.float)
         self._adv = np.zeros(buf_size, dtype=np.float)
         self._mean_act = np.zeros(buf_size, dtype=np.float)
         self._rewards = np.zeros(buf_size, dtype=np.float)
@@ -60,8 +102,16 @@ class TrajectoryReplayBuffer:
         self._rewards[idx] = reward
         self._mean_act[idx] = mean_act
 
+    def expected_returns(self, arr: np.ndarray) -> np.ndarray:
+        expected_returns = np.zeros(arr.shape)
+        for i in reversed(range(len(arr))):
+            ret_t = self._return_estimator(arr[i:])
+            expected_returns[i] = ret_t
+        return expected_returns
+
     def compute_advantage(self):
-        return self._return_estimator.get_return(self._val)
+        ret = self.expected_returns(self._rewards)
+        return ret
 
     def get_trajectories(self):
         data = dict(V=self._val)
