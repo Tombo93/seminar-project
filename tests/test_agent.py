@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from src.utils import DiscountReturn, TrajectoryReplayBuffer
+from src.utils import DiscountReturn, TrajectoryReplayBuffer, GAE
 
 
 class AgentTest(unittest.TestCase):
@@ -8,6 +8,15 @@ class AgentTest(unittest.TestCase):
         d = DiscountReturn()
         r = d.get_return(np.ones(10))
         self.assertAlmostEqual(r, 9.56179, places=5)
+
+    def test_gae(self):
+        rewards = np.zeros(10)
+        val_old = np.ones(10)
+        val_new = np.ones(10)
+        done = np.ones(10)
+        gae = GAE(rewards, val_old, val_new, done)
+        adv, _ = gae.estimate()
+        self.assertEqual(adv, np.ones(10))
 
     def test_advantage_computation(self):
         episode_len = 10

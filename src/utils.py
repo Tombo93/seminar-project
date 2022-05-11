@@ -10,6 +10,12 @@ import matplotlib.pyplot as plt
 from rlbench.backend.observation import Observation
 
 
+class ReturnEstimator(ABC):
+    @abstractmethod
+    def get_return(self, rewards: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+
 class Advantage(ABC):
     @abstractmethod
     def estimate(self, values: np.ndarray) -> np.ndarray:
@@ -17,55 +23,35 @@ class Advantage(ABC):
 
 
 @dataclass
-class GAE(Advantage):
-    """
-    Generalized advantage estimate of a trajectory
-    gamma: trajectory discount (scalar)
-    lamda: exponential mean discount (scalar)
-    value_old_state: value function result with old_state input
-    value_new_state: value function result with new_state input
-    reward: agent reward of taking actions in the environment
-    done: flag for end of episode
-    """
-    rewards: np.ndarray
-    val_old: np.ndarray
-    val_new: np.ndarray
-    done: np.ndarray
-    batch_size: int = done.shape[0]
-    adv: np.ndarray = np.zeros(batch_size + 1)
-    value_target: np.ndarray = np.zeros(batch_size)
-    lamda: Optional[float] = 0.5
-    gamma: Optional[float] = 0.99
-
-    def estimate(self) -> Tuple[np.ndarray, np.ndarray]:
-        for t in reversed(range(self.batch_size)):
-            delta = (
-                self.rewards[t]
-                + (self.gamma * self.val_new[t] * self.done[t])
-                - self.val_old[t]
-            )
-            self.adv[t] = delta + (
-                self.gamma * self.lamda * self.adv[t + 1] * self.done[t]
-            )
-            self.value_target = self.adv + np.squeeze(self.val_old)
-        return self.adv[: self.batch_size], self.target
-
-
-class ReturnEstimator(ABC):
-    @abstractmethod
-    def get_return(self, rewards: np.ndarray) -> np.float:
-        raise NotImplementedError
-
-
-@dataclass
 class DiscountReturn(ReturnEstimator):
     gamma: Optional[float] = 0.99
 
-    def get_return(self, rewards: np.ndarray) -> np.float:
+    def get_return(self, rewards: np.ndarray) -> np.ndarray:
         pot = np.cumsum(np.ones(len(rewards))) - 1
         g = np.full(len(pot), fill_value=self.gamma)
         discount_gamma = g**pot
-        return np.sum(rewards * discount_gamma)
+        return rewards * discount_gamma
+
+
+@dataclass
+class GAE(Advantage):
+    rewards: np.ndarray
+    values: np.ndarray
+    batch_size: int = rewards.shape(0)
+    adv: np.ndarray = np.zeros(batch_size)
+    returns: np.ndarray() = np.zeros(batch_size)
+    lamda: Optional[float] = 0.5
+    gamma: Optional[float] = 0.99
+    discount_return: ReturnEstimator = DiscountReturn(gamma=lamda * gamma)
+
+    def estimate(self) -> Tuple[np.ndarray, np.ndarray]:
+        rew = np.append(self.rewards, 0)
+        val = np.append(self.values, 0)
+        deltas = rew[:-1] + (self.gamma * val[1:]) - val[:-1]
+        self.adv = self.discount_return.get_return(deltas)
+        self.discount_return.gamma = self.gamma
+        self.returns = self.discount_return.get_return(rew)[:-1] # value function targets
+        return self.adv, self.returns
 
 
 class TrajectoryReplayBuffer:
@@ -73,14 +59,14 @@ class TrajectoryReplayBuffer:
 
     def __init__(
         self,
-        return_estimator: ReturnEstimator,
+        advantage: Advantage,
         obs_dim: int,
         act_dim: int,
         val_dim: int,
         buf_size: int = 20,
     ) -> None:
         self._buf_size = buf_size
-        self._return_estimator = return_estimator
+        self._adv_estimator = advantage
         self._obs = np.zeros((buf_size, obs_dim), dtype=np.float)
         self._act = np.zeros((buf_size, act_dim), dtype=np.float)
         self._val = np.zeros((buf_size, val_dim), dtype=np.float)
@@ -102,16 +88,17 @@ class TrajectoryReplayBuffer:
         self._rewards[idx] = reward
         self._mean_act[idx] = mean_act
 
+    def compute_advantage(self):
+        adv_ = self._adv_estimator(self._rewards, self._val)
+        self._adv, val_func_targets = adv_.estimate()
+        return self._adv, val_func_targets
+
     def expected_returns(self, arr: np.ndarray) -> np.ndarray:
         expected_returns = np.zeros(arr.shape)
         for i in reversed(range(len(arr))):
             ret_t = self._return_estimator(arr[i:])
             expected_returns[i] = ret_t
         return expected_returns
-
-    def compute_advantage(self):
-        ret = self.expected_returns(self._rewards)
-        return ret
 
     def get_trajectories(self):
         data = dict(V=self._val)
