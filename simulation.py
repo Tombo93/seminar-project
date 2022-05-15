@@ -5,7 +5,10 @@ from torch import nn
 from torch.optim import Adam
 
 from src.agent import Agent
-from src.utils import TrajectoryReplayBuffer, DiscountReturn
+from src.loss_functions import update_models
+from src.return_estimator import DiscountReturn
+from src.advantage import GAE
+from src.trajectory_buffer import TrajectoryReplayBuffer
 from custom_tasks.custom_env import get_env_task_env
 
 
@@ -28,7 +31,6 @@ def main(
     pi_optim = Adam(agent.policy.parameters(), lr=learning_rate)
     val_optim = Adam(agent.value_func.parameters(), lr=learning_rate)
 
-    trajectories = []
     for _ in range(episodes):
         print("Reset Episode")
         _, obs = task.reset()
@@ -37,30 +39,54 @@ def main(
             action, value, mean_action = agent.step(
                 torch.as_tensor(obs.get_low_dim_data(), dtype=torch.float32)
             )
-
             print(action)
             obs, reward, done = task.step(action)
 
-            trajectory_buf.store(t, action, value, reward, mean_action)
-            
-            pi_optim.zero_grad()
-            val_optim.zero_grad()
-            # policy_loss = compute_pi_loss()
-            # policy_loss.backward()
-            # val_loss = compute_val_loss()
-            # val_loss.backward()
-            pi_optim.step()
-            val_optim.step()
-        trajectories.append(trajectory_buf.get_trajectories())
+            trajectory_buf.store(t, obs, action, value, reward, mean_action)
+            if done:
+                print(f"Episode finished after {t} timesteps")
+                break
+
+        trajectory_buf.finish_trajectory()
+        trajectory_data = trajectory_buf.get_trajectories()
+        update_models(agent, trajectory_data, pi_optim, val_optim, 1, logger=None)
 
     print("Done")
     env.shutdown()
 
 
 if __name__ == "__main__":
-    episode_len, obs_dim, act_dim = 40, 29, 8
-    buf = TrajectoryReplayBuffer(
-        DiscountReturn(), obs_dim, act_dim, buf_size=episode_len
+    episodes = 1
+    episode_len = 100
+    learning_rate = 0.0001
+
+    obs_dim = 29
+    act_dim = 8
+    val_dim = 8
+    hidden_dim = 32
+    buf_size = episode_len
+
+    gamma, lamda = 0.99, 0.5
+    return_estimator = DiscountReturn(gamma=gamma)
+    advantage_return = DiscountReturn(gamma=gamma * lamda)
+    advantage = GAE(advantage_return, lamda=lamda, gamma=gamma)
+
+    trajectory_buffer = TrajectoryReplayBuffer(
+        return_estimator,
+        advantage,
+        buf_size=buf_size,
+        obs_dim=obs_dim,
+        act_dim=act_dim,
+        val_dim=val_dim,
     )
+
     env, task = get_env_task_env()
-    main(env, task, buf, episode_length=episode_len)
+
+    main(
+        env=env,
+        task=task,
+        trajectory_buf=trajectory_buffer,
+        episodes=episodes,
+        episode_length=episode_len,
+        learning_rate=learning_rate,
+    )
