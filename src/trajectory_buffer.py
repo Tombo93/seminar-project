@@ -22,7 +22,7 @@ class TrajectoryReplayBuffer:
         self._buf_size = buf_size
         self._obs = np.zeros((buf_size, obs_dim), dtype=float)
         self._act = np.zeros((buf_size, act_dim), dtype=float)
-        self._val = np.zeros((buf_size, val_dim), dtype=float)
+        self._val = np.zeros(buf_size, dtype=float)
         self._rewards = np.zeros(buf_size, dtype=float)
         self._mean_act = np.zeros(buf_size, dtype=float)
 

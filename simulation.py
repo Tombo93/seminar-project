@@ -42,7 +42,7 @@ def main(
             print(action)
             obs, reward, done = task.step(action)
 
-            trajectory_buf.store(t, obs, action, value, reward, mean_action)
+            trajectory_buf.store(t, obs.get_low_dim_data(), action, value, reward, mean_action)
             if done:
                 print(f"Episode finished after {t} timesteps")
                 break
@@ -57,7 +57,7 @@ def main(
 
 if __name__ == "__main__":
     episodes = 1
-    episode_len = 100
+    episode_len = 10
     learning_rate = 0.0001
 
     obs_dim = 29
