@@ -56,28 +56,30 @@ def main(
 
 
 if __name__ == "__main__":
-    episodes = 1
-    episode_len = 100
-    learning_rate = 0.0001
+    # Hyperparameters #
+    EPISODES = 1
+    EPISODE_LEN = 100
+    LEARNING_RATE = 0.0001
 
-    obs_dim = 29
-    act_dim = 8
-    val_dim = 8
-    hidden_dim = 32
-    buf_size = episode_len
+    OBS_DIM = 29
+    ACT_DIM = 8
+    VAL_DIM = 8
+    HIDDEN_DIM = 32
+    BUF_SIZE = EPISODE_LEN
 
-    gamma, lamda = 0.99, 0.5
-    return_estimator = DiscountReturn(gamma=gamma)
-    advantage_return = DiscountReturn(gamma=gamma * lamda)
-    advantage = GAE(advantage_return, lamda=lamda, gamma=gamma)
+    GAMMA, LAMDA = 0.99, 0.5
+    # --------------- #
+    return_estimator = DiscountReturn(gamma=GAMMA)
+    advantage_return = DiscountReturn(gamma=GAMMA * LAMDA)
+    advantage = GAE(advantage_return, lamda=LAMDA, gamma=GAMMA)
 
     trajectory_buffer = TrajectoryReplayBuffer(
         return_estimator,
         advantage,
-        buf_size=buf_size,
-        obs_dim=obs_dim,
-        act_dim=act_dim,
-        val_dim=val_dim,
+        buf_size=BUF_SIZE,
+        obs_dim=OBS_DIM,
+        act_dim=ACT_DIM,
+        val_dim=VAL_DIM,
     )
 
     env, task = get_env_task_env()
@@ -86,7 +88,7 @@ if __name__ == "__main__":
         env=env,
         task=task,
         trajectory_buf=trajectory_buffer,
-        episodes=episodes,
-        episode_length=episode_len,
-        learning_rate=learning_rate,
+        episodes=EPISODES,
+        episode_length=EPISODE_LEN,
+        learning_rate=LEARNING_RATE,
     )
