@@ -15,7 +15,6 @@ class TrajectoryReplayBuffer:
         buf_size: int,
         obs_dim: int,
         act_dim: int,
-        val_dim: int,
     ) -> None:
         self._ret_estimator = return_estimator
         self._adv_estimator = advantage

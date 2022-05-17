@@ -42,7 +42,9 @@ def main(
             print(action)
             obs, reward, done = task.step(action)
 
-            trajectory_buf.store(t, obs.get_low_dim_data(), action, value, reward, mean_action)
+            trajectory_buf.store(
+                t, obs.get_low_dim_data(), action, value, reward, mean_action
+            )
             if done:
                 print(f"Episode finished after {t} timesteps")
                 break
@@ -63,7 +65,6 @@ if __name__ == "__main__":
 
     OBS_DIM = 29
     ACT_DIM = 8
-    VAL_DIM = 8
     HIDDEN_DIM = 32
     BUF_SIZE = EPISODE_LEN
 
@@ -79,7 +80,6 @@ if __name__ == "__main__":
         buf_size=BUF_SIZE,
         obs_dim=OBS_DIM,
         act_dim=ACT_DIM,
-        val_dim=VAL_DIM,
     )
 
     env, task = get_env_task_env(headless=False)
