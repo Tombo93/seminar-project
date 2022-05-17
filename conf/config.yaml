@@ -1,0 +1,10 @@
+hyperparams:
+  episodes: 10
+  episode_len: 50
+  learning_rate: 0.0001
+  gamma: 0.99
+  lambda: 0.2
+  hidden_dim: 32
+file_paths:
+  save_policy: "./model/policy"
+  save_value_func: "./model/value_function"

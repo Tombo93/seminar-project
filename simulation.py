@@ -57,8 +57,8 @@ def main(
 
 if __name__ == "__main__":
     # Hyperparameters #
-    EPISODES = 1
-    EPISODE_LEN = 100
+    EPISODES = 4
+    EPISODE_LEN = 30
     LEARNING_RATE = 0.0001
 
     OBS_DIM = 29
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         val_dim=VAL_DIM,
     )
 
-    env, task = get_env_task_env()
+    env, task = get_env_task_env(headless=False)
 
     main(
         env=env,
