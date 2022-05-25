@@ -50,7 +50,7 @@ class ValueFunctionLearner(nn.Module):
         return torch.squeeze(self.v_net(observation), -1)
 
 
-class Agent:
+class Agent(nn.Module):
     def __init__(
         self,
         obs_dim: int,
@@ -81,10 +81,10 @@ class Agent:
         torch.save(self.policy.state_dict(), Path(self.save_path, "policy"))
         torch.save(self.value_func.state_dict(), Path(self.save_path, "value_function"))
 
-    def load_model(self, eval: bool = False) -> None:
+    def load_model(self, eval: bool = False, device: str ='cpu') -> None:
         assert self.save_path is not None
-        pi = torch.load(Path(self.save_path, "policy"))
-        val = torch.load(Path(self.save_path, "value_function"))
+        pi = torch.load(Path(self.save_path, "policy"), map_location=torch.device(device))
+        val = torch.load(Path(self.save_path, "value_function"), map_location=torch.device(device))
         self.policy.load_state_dict(pi)
         self.value_func.load_state_dict(val)
         if eval:

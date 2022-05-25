@@ -10,12 +10,14 @@ class TrajectoryReplayBuffer:
 
     def __init__(
         self,
+        device: torch.device,
         return_estimator: ReturnEstimator,
         advantage: Advantage,
         buf_size: int,
         obs_dim: int,
         act_dim: int,
     ) -> None:
+        self._device = device
         self._ret_estimator = return_estimator
         self._adv_estimator = advantage
         self._buf_size = buf_size
@@ -54,4 +56,7 @@ class TrajectoryReplayBuffer:
             logp=self._mean_act,
             adv=self._adv,
         )
-        return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
+        return {
+            k: torch.as_tensor(v, dtype=torch.float32).to(self._device)
+            for k, v in data.items()
+        }
